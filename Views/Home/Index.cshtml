@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Web Api JWT Example</title>
+    <script  src="https://code.jquery.com/jquery-3.2.1.min.js"
+      integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+      crossorigin="anonymous"></script>
+      <style>
+          div {
+              margin-top: 50px;
+          }
+      </style>
+  </head>
+  <body>
+      <h1>Example of using JWT to secure an Web Api using ASP.NET Core 2.0</h1>
+      <div style="margin: 50px auto; width:600px;">
+          <div id="btLoginContainer">
+            <input type="text" name="username" id="username" placeholder="Username"/>
+            <input type="password" name="password" id="password" placeholder="Password"/>
+            <button id="btLogin">Login</button><br>   
+            <label>(Use the same password as the username to sign in)</label>                     
+          </div>
+          <div id="btLogoutContainer">
+              <button id="btLogout">Logout</button>
+          </div>
+          <div>
+            <label>Action that requires the user to be authenticated: </label><button id="btGetUserDetails">Get User Details</button>
+          </div>          
+
+      </div>
+      <div style="margin: 50px; background: lightgray" id="responseContainer">
+          
+      </div>
+      
+      <script>
+          function handleError(xhr, textStatus, errorThrown){              
+              if (xhr.status == 401)
+                $('#responseContainer').html("Unauthorized request"); 
+              else{
+                var message = "<p>Status code: " + xhr.status + "</p>";
+                message += "<pre>" + xhr.responseText + "</pre>";
+                $('#responseContainer').html(message);
+              }
+          }
+
+          function isUserLoggedIn(){
+              return localStorage.getItem("token") !== null;
+          }        
+
+          function getSavedToken() {
+              return localStorage.getItem("token");
+          }
+
+          $.ajaxSetup({
+              beforeSend: function(xhr) {
+                  if (isUserLoggedIn()) {
+                      xhr.setRequestHeader('Authorization', 'Bearer ' + getSavedToken());                      
+                  }
+              }
+          });
+
+          $(function(){
+              $('#btLogin').click(function() {
+                  $.post("/token", $.param({username: $('#username').val(), password: $('#password').val()})).done(function(token){
+                      localStorage.setItem("token", token);
+                      $('#btLoginContainer').hide();
+                      $('#btLogoutContainer').show();
+                      var message = "<p>Token received and saved in local storage under the key 'token'</p>";
+                      message += "<p>Token Value: </p><p style='word-wrap:break-word'>" + token + "</p>";
+                      $('#responseContainer').html(message);                                            
+                  }).fail(handleError);
+              });
+
+              $('#btLogout').click(function(){
+                  localStorage.removeItem("token");     
+                  $('#btLogoutContainer').hide();
+                  $('#btLoginContainer').show();
+                  $('#responseContainer').html("<p>Token deleted from local storage</p>");                  
+              });
+
+
+              $('#btGetUserDetails').click(function(){
+                  $.get("/home/getuserdetails").done(function(userDetails){ 
+                      $('#responseContainer').html("<pre>" + JSON.stringify(userDetails) + "</pre>");                        
+                  }).fail(handleError);
+              });
+
+
+              if (isUserLoggedIn()){ 
+                  $('#btLoginContainer').hide();
+                  $('#btLogoutContainer').show();
+              }else {
+                  $('#btLoginContainer').show();
+                  $('#btLogoutContainer').hide();                  
+              }
+          });
+      </script>
+  </body>
+</html>
